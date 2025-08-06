@@ -379,51 +379,143 @@ def create_layout():
 
 app.layout = create_layout()
 
+import sqlite3
+from datetime import datetime, timedelta
+import pandas as pd
+from dash import html, dcc
+
 def main_page():
+    # Initialize platforms
     platforms = ['OFPPT Academy', 'OFPPT Langues', 'ScholarVox', 'Electude']
+    
+    # Fetch stats for the last 24 hours
+    time_threshold = (datetime.now() - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Count total logs from the database
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            query = 'SELECT COUNT(*) FROM logs WHERE timestamp >= ?'
+            total_logs = conn.execute(query, (time_threshold,)).fetchone()[0]
+    except Exception as e:
+        print(f"Erreur lors de la récupération des journaux: {e}")
+        total_logs = 0
+
+    # Count anomalies from the CSV
+    try:
+        df_anomalies = pd.read_csv(ANOMALIES_CSV)
+        df_anomalies['timestamp'] = pd.to_datetime(df_anomalies['timestamp'])
+        recent_anomalies = df_anomalies[df_anomalies['timestamp'] >= time_threshold]
+        total_anomalies = len(recent_anomalies)
+    except Exception as e:
+        print(f"Erreur lors de la récupération des anomalies: {e}")
+        total_anomalies = 0
+
+    # Platform cards
     platform_cards = [
         html.Div([
-            html.Div(className="flex items-center mb-3", children=[
-                html.Span("📚", className="text-3xl mr-2 text-purple-600"),  # Modern icon
-                html.H5(platform, className="text-xl font-bold text-purple-600"),
+            html.Div(className="flex items-center justify-between mb-4", children=[
+                html.Div(className="flex items-center", children=[
+                    html.Span("📚", className="text-4xl mr-3 text-indigo-500"),
+                    html.H5(platform, className="text-xl font-semibold text-gray-900"),
+                ]),
+                html.Span("🟢", className="text-2xl", title="Plateforme Active")
             ]),
-            html.P("Explorez les logs et anomalies.", className="text-gray-700 text-base mb-4"),
-            dcc.Link("Voir détails", href=f"/platform/{platform.replace(' ', '_')}", 
-                     className="mt-4 inline-block bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-2.5 rounded-full font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 hover:shadow-lg text-base")
-        ], className="bg-gradient-to-br from-white to-gray-50 p-8 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-purple-200/50 w-80 animate-slide-in", style={'animation-delay': f'{i * 0.1}s'}) for i, platform in enumerate(platforms)
+            html.P("Surveillez l'activité, détectez les anomalies et consultez des analyses détaillées en temps réel.", 
+                   className="text-gray-600 text-sm mb-4 line-clamp-2"),
+            dcc.Link("Explorer le Tableau de Bord", href=f"/platform/{platform.replace(' ', '_')}", 
+                     className="inline-block bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-5 py-2 rounded-full hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 transform hover:-translate-y-1 shadow-md")
+        ], className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-indigo-200 transform hover:-translate-y-2 platform-card")
+        for platform in platforms
     ]
+
+    # Quick stats overview
+    stats_cards = [
+        html.Div([
+            html.H6("Journaux Totaux", className="text-sm font-medium text-gray-600"),
+            html.P(f"{total_logs:,}", className="text-2xl font-bold text-indigo-600"),
+            html.Span("Dernières 24h", className="text-xs text-gray-500")
+        ], className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[150px]"),
+        html.Div([
+            html.H6("Anomalies Détectées", className="text-sm font-medium text-gray-600"),
+            html.P(f"{total_anomalies}", className="text-2xl font-bold text-red-600"),
+            html.Span("Dernières 24h", className="text-xs text-gray-500")
+        ], className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[150px]"),
+        html.Div([
+            html.H6("Plateformes Actives", className="text-sm font-medium text-gray-600"),
+            html.P(str(len(platforms)), className="text-2xl font-bold text-green-600"),
+            html.Span("Actuellement en Ligne", className="text-xs text-gray-500")
+        ], className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[150px]")
+    ]
+
+    # Dynamic welcome message with username
+    username = session.get('username', 'Administrateur')
 
     return html.Div([
         # Header
-        html.Div(className="fixed top-0 left-0 w-full bg-white/30 backdrop-blur-md shadow-lg z-10", style={
-            'background': 'linear-gradient(to right, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.2))',
-        }, children=[
-            html.Div(className="container mx-auto px-4 py-4 flex justify-between items-center", children=[
-                html.H1(
-                    "Tableau de bord CMC",
-                    className="text-4xl font-extrabold",
-                    style={
-                        'background': 'linear-gradient(to right, #7c3aed, #2563eb)',
-                        '-webkit-background-clip': 'text',
-                        'background-clip': 'text',
-                        'color': 'transparent',
-                        'text-shadow': '0 0 8px rgba(124, 58, 237, 0.5)',
-                        'font-family': "'Inter', 'Arial', sans-serif",
-                        'animation': 'fade-in 1s ease-out'
-                    }
-                ),
-                html.A("Déconnexion", href="/logout", className="text-white bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition transform hover:-translate-y-1")
+        html.Div(className="fixed top-0 left-0 w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg z-30", children=[
+            html.Div(className="container mx-auto flex justify-between items-center", children=[
+                html.H1("CMC GUARD", className="text-3xl font-extrabold tracking-tight", style={
+                    'background': 'linear-gradient(to right, #ffffff, #e0e0e0)',
+                    '-webkit-background-clip': 'text',
+                    'background-clip': 'text',
+                    'color': 'transparent'
+                }),
+                html.Div(className="flex items-center space-x-6", children=[
+                    html.Span(f"Bienvenue, {username}", className="text-sm font-medium hidden sm:block"),
+                    html.A("Déconnexion", href="/logout", className="bg-white text-gray-900 px-4 py-2 rounded-lg hover:bg-indigo-100 transition-all duration-300 transform hover:-translate-y-1 shadow-sm")
+                ])
             ])
         ]),
-        # Main Content
-        html.Div(className="container mx-auto px-4 pt-24 pb-8 flex justify-center items-center min-h-screen", children=[
-            html.Div([
-                html.Div(platform_cards, className="grid grid-cols-2 gap-8 max-w-4xl"),
-            ], className="bg-white/20 backdrop-blur-lg rounded-2xl shadow-2xl p-10 border border-purple-200/30 animate-fade-in")
+        # Main Content with Background
+        html.Div(className="relative z-10 flex flex-col min-h-screen", style={
+            'backgroundImage': 'url("https://cmc.ac.ma/sites/default/files/2024-10/CMC%20CASA%20-.png")',
+            'backgroundSize': 'cover',
+            'backgroundPosition': 'center',
+            'backgroundRepeat': 'no-repeat',
+            'backgroundColor': '#f4f7fa'  # Fallback color
+        }, children=[
+            # Overlay for readability
+            html.Div(className="absolute inset-0 bg-gray-900 bg-opacity-50 z-0"),
+            html.Div(className="container mx-auto pt-24 px-4 relative z-20 flex-grow", children=[
+                # Welcome Banner
+                html.Div([
+                    html.H2("Tableau de Bord CMC-Guard", className="text-4xl font-extrabold text-white mb-4 text-center animate-fade-in-down"),
+                    html.P(
+                        f"Salut {username} ! Sécurisez vos plateformes CMC avec une détection d'anomalies en temps réel et des analyses puissantes. Prêt à prendre le contrôle ?",
+                        className="text-lg text-gray-200 max-w-3xl mx-auto text-center leading-relaxed"
+                    ),
+                ], className="bg-gradient-to-r from-indigo-900/80 to-purple-900/80 p-8 rounded-2xl shadow-xl mb-10 border border-indigo-300/50 animate-pulse-subtle"),
+                
+                # Quick Stats
+                html.Div([
+                    html.H3("Statistiques Rapides", className="text-2xl font-semibold text-white mb-6"),
+                    html.Div(stats_cards, className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10")
+                ]),
+                
+                # Platform Cards
+                html.Div([
+                    html.H3("Plateformes", className="text-2xl font-semibold text-white mb-6"),
+                    html.Div(platform_cards, className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6")
+                ])
+            ]),
+            # Footer
+            html.Footer(className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg z-20 w-full", children=[
+                html.Div(className="container mx-auto flex flex-col sm:flex-row justify-between items-center", children=[
+                    html.Div(className="text-sm font-medium", children=[
+                        html.P("© 2025 CMC GUARD. Tous droits réservés.", className="text-gray-200"),
+                        html.P("Sécurisation de vos plateformes avec des analyses en temps réel et détection d'anomalies.", className="text-gray-300 mt-1")
+                    ]),
+                    html.Div(className="flex space-x-6 mt-4 sm:mt-0", children=[
+                        html.A("Politique de Confidentialité", href="/privacy", className="text-gray-200 hover:text-white transition-all duration-300"),
+                        html.A("Conditions d'Utilisation", href="/terms", className="text-gray-200 hover:text-white transition-all duration-300"),
+                        html.A("Nous Contacter", href="/contact", className="text-gray-200 hover:text-white transition-all duration-300")
+                    ])
+                ])
+            ])
         ])
-    ], className="min-h-screen", style={
-        'background': 'linear-gradient(to bottom, #f3f4f6, #e5e7eb)'
-    })
+    ], className="relative")
+
+
 def fig_to_base64(fig):
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight')
@@ -442,7 +534,7 @@ def platform_page(platform):
                 if col in df_logs.columns:
                     df_logs[col] = df_logs[col].apply(decrypt_data)
     except Exception as e:
-        print(f"Error loading logs: {e}")
+        print(f"Erreur lors de la récupération des journaux: {e}")
         df_logs = pd.DataFrame()
 
     try:
@@ -452,7 +544,7 @@ def platform_page(platform):
             lambda x: ' '.join([decrypt_data(word) if word.startswith('g=') else word for word in x.split()])
         )
     except Exception as e:
-        print(f"Error loading anomalies: {e}")
+        print(f"Erreur lors de la récupération des anomalies: {e}")
         df_anomalies = pd.DataFrame()
 
     try:
@@ -460,7 +552,7 @@ def platform_page(platform):
             query = 'SELECT * FROM audit_log WHERE details LIKE ?'
             df_actions = pd.read_sql_query(query, conn, params=(f'%{platform}%',))
     except Exception as e:
-        print(f"Error loading actions: {e}")
+        print(f"Erreur lors de la récupération des actions: {e}")
         df_actions = pd.DataFrame()
 
     histogram_img, timeline_img = None, None
@@ -486,13 +578,32 @@ def platform_page(platform):
         timeline_img = fig_to_base64(plt.gcf())
         plt.close()
 
+    # Dynamic welcome message with username
+    username = session.get('username', 'Administrateur')
+
     return html.Div([
-        html.Div(className="container mx-auto px-4 py-8", children=[
+        # Header
+        html.Div(className="fixed top-0 left-0 w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg z-20", children=[
+            html.Div(className="container mx-auto flex justify-between items-center", children=[
+                html.H1("CMC GUARD", className="text-3xl font-extrabold tracking-tight", style={
+                    'background': 'linear-gradient(to right, #ffffff, #e0e0e0)',
+                    '-webkit-background-clip': 'text',
+                    'background-clip': 'text',
+                    'color': 'transparent'
+                }),
+                html.Div(className="flex items-center space-x-6", children=[
+                    html.Span(f"Bienvenue, {username}", className="text-sm font-medium hidden sm:block"),
+                    html.A("Déconnexion", href="/logout", className="bg-white text-gray-900 px-4 py-2 rounded-lg hover:bg-indigo-100 transition-all duration-300 transform hover:-translate-y-1 shadow-sm")
+                ])
+            ])
+        ]),
+        # Main Content
+        html.Div(className="container mx-auto px-4 pt-24 pb-12", children=[
             html.H2(f"📊 Plateforme : {platform}", className="text-3xl font-bold text-center text-gray-800 mb-2"),
             html.P("Analyse des activités, anomalies et journaux récents", className="text-center text-gray-600 mb-6"),
             html.Div(className="flex justify-between mb-6", children=[
                 dcc.Link("← Retour au tableau de bord", href="/dashboard", className="text-purple-600 hover:underline font-medium"),
-                html.A("Déconnexion", href="/logout", className="text-white bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition transform hover:-translate-y-1")
+                
             ]),
             html.Div([
                 html.H4("🕒 Logs récents (dernière heure)", className="text-lg font-semibold text-gray-800 mb-3"),
@@ -538,6 +649,20 @@ def platform_page(platform):
                 html.Div([
                     html.H4("📊 Évolution temporelle", className="text-lg font-semibold text-gray-800 mb-3"),
                     html.Img(src=timeline_img, className="w-full rounded-lg shadow-md transform hover:scale-105 transition duration-300", style={'height': '250px'}) if timeline_img else html.P("Aucune donnée pour la courbe temporelle", className="text-gray-600")
+                ])
+            ])
+        ]),
+        # Footer
+        html.Footer(className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg", children=[
+            html.Div(className="container mx-auto flex flex-col sm:flex-row justify-between items-center", children=[
+                html.Div(className="text-sm font-medium", children=[
+                    html.P("© 2025 CMC GUARD. Tous droits réservés.", className="text-gray-200"),
+                    html.P("Sécurisation de vos plateformes avec des analyses en temps réel et détection d'anomalies.", className="text-gray-300 mt-1")
+                ]),
+                html.Div(className="flex space-x-6 mt-4 sm:mt-0", children=[
+                    html.A("Politique de Confidentialité", href="/privacy", className="text-gray-200 hover:text-white transition-all duration-300"),
+                    html.A("Conditions d'Utilisation", href="/terms", className="text-gray-200 hover:text-white transition-all duration-300"),
+                    html.A("Nous Contacter", href="/contact", className="text-gray-200 hover:text-white transition-all duration-300")
                 ])
             ])
         ])

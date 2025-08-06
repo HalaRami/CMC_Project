@@ -1,12 +1,15 @@
+
 /* Reinitialisation et police */
 * {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     box-sizing: border-box;
 }
 
-body {
-    background-color: #f4f7fa;
-    color: #333;
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow-x: hidden;
 }
 
 /* En-tete principal */
@@ -36,7 +39,7 @@ h2 {
     border-radius: 5px;
     border: 1px solid #ced4da;
     padding: 10px;
-    background-color: #e6f0fa; /* Consistent light blue background */
+    background-color: #e6f0fa;
     transition: border-color 0.3s ease;
 }
 
@@ -59,11 +62,15 @@ h2 {
     border-radius: 10px;
     overflow: hidden;
     background: linear-gradient(135deg, #ffffff, #e9ecef);
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .platform-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
 .platform-card .card-title {
@@ -160,7 +167,6 @@ table {
     padding: 20px;
     max-width: 1400px;
     margin: 0 auto;
-    background-color: #f4f7fa !important;
 }
 
 /* Titres de section */
@@ -170,7 +176,77 @@ h4 {
     font-weight: 500;
 }
 
-/* Responsive */
+/* Main content layout */
+.relative.z-10.flex-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.flex-grow {
+    flex-grow: 1;
+}
+
+.bg-cover {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Ensure the overlay covers the entire page */
+.absolute.inset-0 {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+}
+
+/* Ensure content container stretches appropriately */
+.container.mx-auto {
+    max-width: 1400px;
+    width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Footer styling */
+footer {
+    width: 100%;
+    z-index: 20;
+    position: relative;
+}
+
+/* Animation classes for enhanced UX */
+.animate-fade-in-down {
+    animation: fadeInDown 0.8s ease-out;
+}
+
+.animate-pulse-subtle {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeInDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.95;
+    }
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .container.mt-5 {
         padding: 20px;
@@ -178,6 +254,7 @@ h4 {
     
     .platform-card {
         margin-bottom: 15px;
+        min-height: 180px;
     }
 
     .dash-table-container .dash-spreadsheet-container {
@@ -188,16 +265,10 @@ h4 {
         height: 200px;
         padding: 10px;
     }
-}
 
-.platform-card {
-    background: linear-gradient(135deg, #ffffff, #f8f9fa);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.platform-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    .animate-fade-in-down {
+        animation: none;
+    }
 }
 
 .card-title {
@@ -207,8 +278,4 @@ h4 {
 .btn-outline-primary:hover {
     background-color: #0d6efd;
     color: white;
-}
-
-body, html {
-    background-color: #f4f7fa !important;
 }
